@@ -8,7 +8,7 @@ import AppButton from '@/components/ui/AppButton.vue'
 import { navigateByTab } from '@/composables/useAppNavigation'
 import { formatCurrency } from '@/lib/finance'
 import { useFinanceStore } from '@/stores/finance'
-import type { CategoryIcon } from '@/types/category'
+import type { CategoryIcon, CategoryItem } from '@/types/category'
 import type { NavKey } from '@/types/navigation'
 
 const router = useRouter()
@@ -36,14 +36,18 @@ const iconOptions: Array<{ key: CategoryIcon; label: string }> = [
   { key: 'stack', label: 'Lainnya' },
 ]
 
-const categoryTiles = computed(() => [
+type CategoryTile =
+  | (CategoryItem & { active: boolean; more: false })
+  | { slug: 'more'; label: string; icon: 'plus'; active: boolean; more: true }
+
+const categoryTiles = computed<CategoryTile[]>(() => [
   ...expenseCategories.value.map((item) => ({
     ...item,
     active: item.slug === expenseCategories.value[0]?.slug,
-    more: false,
+    more: false as const,
   })),
   ...(financeStore.savingsCategory
-    ? [{ ...financeStore.savingsCategory, active: false, more: false }]
+    ? [{ ...financeStore.savingsCategory, active: false, more: false as const }]
     : []),
   { slug: 'more', label: 'Lainnya', icon: 'plus' as const, active: false, more: true },
 ])

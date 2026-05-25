@@ -16,9 +16,7 @@ import {
 
 import {
   buildSavingsGoalView,
-  defaultExpenseCategories,
   defaultSavingsCategory,
-  defaultSavingsGoals,
   formatCurrency,
   groupCategoryExpenses,
   groupTransactions,
@@ -225,7 +223,6 @@ export const useFinanceStore = defineStore('finance', {
 
     async ensureSeedData(userPath: string) {
       const categoriesRef = collection(db, userPath, 'categories')
-      const goalsRef = collection(db, userPath, 'savingsGoals')
 
       const [categorySeedSnapshot] = await Promise.all([
         getDocs(query(categoriesRef, limit(1))),

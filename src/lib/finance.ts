@@ -210,7 +210,6 @@ export type ChartData = {
 }
 
 export const computeDailyChart = (transactions: TransactionRecord[]): ChartData => {
-  const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
   const labels = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
   const now = new Date()
   const startOfWeek = new Date(now)
