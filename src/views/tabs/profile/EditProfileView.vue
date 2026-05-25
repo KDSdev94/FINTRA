@@ -8,6 +8,7 @@ import MobileBottomNav from '@/components/navigation/MobileBottomNav.vue'
 import ProfileAvatar from '@/components/profile/ProfileAvatar.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import { navigateByTab } from '@/composables/useAppNavigation'
+import { toDateInputValue } from '@/lib/date'
 import { useAuthStore } from '@/stores/auth'
 import type { NavKey } from '@/types/navigation'
 
@@ -19,6 +20,9 @@ const phone = ref('')
 const email = ref('')
 const birthDate = ref('')
 const pushNotifications = ref(true)
+const avatarInput = ref<HTMLInputElement | null>(null)
+const avatarUploading = ref(false)
+const avatarError = ref('')
 
 const handleNavigate = (key: NavKey) => navigateByTab(router, key)
 
@@ -30,7 +34,7 @@ watchEffect(() => {
   username.value = profile.value.fullName
   phone.value = profile.value.phoneNumber
   email.value = profile.value.email
-  birthDate.value = profile.value.birthDate
+  birthDate.value = toDateInputValue(profile.value.birthDate)
   pushNotifications.value = profile.value.pushNotifications
 })
 
@@ -41,6 +45,31 @@ const handleSave = async () => {
     birthDate: birthDate.value,
     pushNotifications: pushNotifications.value,
   })
+}
+
+const openAvatarPicker = () => {
+  avatarInput.value?.click()
+}
+
+const handleAvatarChange = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+
+  if (!file) {
+    return
+  }
+
+  avatarUploading.value = true
+  avatarError.value = ''
+
+  try {
+    await authStore.updateAvatar(file)
+  } catch (error) {
+    avatarError.value = error instanceof Error ? error.message : 'Gagal mengganti foto profil.'
+  } finally {
+    avatarUploading.value = false
+    input.value = ''
+  }
 }
 </script>
 
@@ -77,12 +106,32 @@ const handleSave = async () => {
       <div
         class="relative mt-2 flex flex-1 flex-col rounded-t-[40px] bg-(--color-panel-background) px-6 pt-[74px]"
       >
-        <div class="absolute top-[-58px] left-1/2 -translate-x-1/2">
-          <ProfileAvatar editable>
-            <template #badge>
-              <AppIcon name="camera" class="h-4 w-4" />
-            </template>
-          </ProfileAvatar>
+        <div class="absolute top-[-58px] left-1/2 flex -translate-x-1/2 flex-col items-center">
+          <button
+            type="button"
+            class="rounded-full disabled:cursor-wait disabled:opacity-80"
+            :disabled="avatarUploading"
+            aria-label="Ganti foto profil"
+            @click="openAvatarPicker"
+          >
+            <ProfileAvatar editable>
+              <template #badge>
+                <AppIcon
+                  name="camera"
+                  class="h-4 w-4"
+                  :class="avatarUploading ? 'animate-pulse' : ''"
+                />
+              </template>
+            </ProfileAvatar>
+          </button>
+
+          <input
+            ref="avatarInput"
+            type="file"
+            accept="image/*"
+            class="hidden"
+            @change="handleAvatarChange"
+          />
         </div>
 
         <div class="text-center">
@@ -95,6 +144,13 @@ const handleSave = async () => {
             class="mt-2 text-[1rem] text-(--color-muted-text)/85"
           >
             <span class="font-bold">ID:</span> {{ profile?.id.slice(0, 8).toUpperCase() ?? 'GUEST' }}
+          </p>
+          <p
+            v-if="avatarUploading || avatarError"
+            class="mt-3 text-sm font-semibold"
+            :class="avatarError ? 'text-(--color-ocean-blue-button)' : 'text-(--color-muted-text)'"
+          >
+            {{ avatarError || 'Mengunggah foto...' }}
           </p>
         </div>
 

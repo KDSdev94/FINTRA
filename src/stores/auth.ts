@@ -18,6 +18,8 @@ import {
 import { defineStore } from 'pinia'
 import { deleteDoc, doc, getDoc, runTransaction, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
 
+import { uploadProfileAvatar } from '@/lib/cloudinary'
+import { toDateInputValue } from '@/lib/date'
 import { auth, db } from '@/lib/firebase'
 import { getStoredThemeMode, setThemeMode, type ThemeMode } from '@/theme/useTheme'
 
@@ -56,7 +58,7 @@ const toProfile = (user: User, docData?: AuthProfileDoc | null): AuthProfile => 
   userId: docData?.userId ?? '',
   fullName: docData?.fullName ?? user.displayName ?? 'Pengguna Fintra',
   phoneNumber: docData?.phoneNumber ?? '',
-  birthDate: docData?.birthDate ?? '',
+  birthDate: toDateInputValue(docData?.birthDate),
   avatarUrl: docData?.avatarUrl ?? user.photoURL ?? '',
   pushNotifications: docData?.pushNotifications ?? true,
   email: docData?.email ?? user.email ?? '',
@@ -109,6 +111,8 @@ googleProvider.setCustomParameters({
 const isGoogleUser = (user: User) =>
   user.providerData.some((provider) => provider.providerId === GoogleAuthProvider.PROVIDER_ID)
 
+const maxAvatarSize = 3 * 1024 * 1024
+
 const getNextUserId = async () => {
   const counterRef = doc(db, 'counters', 'users')
   const newCount = await runTransaction(db, async (transaction) => {
@@ -129,7 +133,7 @@ const buildProfilePayload = (
   userId: overrides.userId ?? '',
   fullName: overrides.fullName ?? user.displayName ?? 'Pengguna Fintra',
   phoneNumber: overrides.phoneNumber ?? '',
-  birthDate: overrides.birthDate ?? '',
+  birthDate: toDateInputValue(overrides.birthDate),
   avatarUrl: overrides.avatarUrl ?? user.photoURL ?? '',
   pushNotifications: overrides.pushNotifications ?? true,
   email: overrides.email ?? user.email ?? '',
@@ -374,7 +378,7 @@ export const useAuthStore = defineStore('auth', {
             userId,
             fullName: payload.fullName,
             phoneNumber: payload.phoneNumber,
-            birthDate: payload.birthDate || '',
+            birthDate: toDateInputValue(payload.birthDate),
             avatarUrl: '',
             email: payload.email,
             authProvider: 'password',
@@ -453,7 +457,7 @@ export const useAuthStore = defineStore('auth', {
             userId: this.profile?.userId ?? '',
             fullName: payload.fullName,
             phoneNumber: payload.phoneNumber,
-            birthDate: payload.birthDate || '',
+            birthDate: toDateInputValue(payload.birthDate),
             pushNotifications: payload.pushNotifications,
             email: this.user.email ?? '',
             avatarUrl: this.profile?.avatarUrl ?? this.user.photoURL ?? '',
@@ -469,7 +473,7 @@ export const useAuthStore = defineStore('auth', {
           userId: this.profile?.userId ?? '',
           fullName: payload.fullName,
           phoneNumber: payload.phoneNumber,
-          birthDate: payload.birthDate,
+          birthDate: toDateInputValue(payload.birthDate),
           avatarUrl: this.profile?.avatarUrl ?? this.user.photoURL ?? '',
           pushNotifications: payload.pushNotifications,
           email: this.user.email ?? '',
@@ -481,6 +485,48 @@ export const useAuthStore = defineStore('auth', {
         throw error
       } finally {
         this.loading = false
+      }
+    },
+
+    async updateAvatar(file: File) {
+      if (!this.user) {
+        throw new Error('User tidak ditemukan.')
+      }
+
+      this.errorMessage = ''
+
+      if (!file.type.startsWith('image/')) {
+        throw new Error('File harus berupa gambar.')
+      }
+
+      if (file.size > maxAvatarSize) {
+        throw new Error('Ukuran foto maksimal 3 MB.')
+      }
+
+      try {
+        const avatarUrl = await uploadProfileAvatar(file, this.user.uid)
+
+        await updateFirebaseProfile(this.user, {
+          photoURL: avatarUrl,
+        })
+
+        await setDoc(
+          doc(db, 'users', this.user.uid),
+          {
+            avatarUrl,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true },
+        )
+
+        if (this.profile) {
+          this.profile.avatarUrl = avatarUrl
+        }
+
+        return avatarUrl
+      } catch (error) {
+        this.errorMessage = error instanceof Error ? error.message : 'Gagal mengganti foto profil.'
+        throw error
       }
     },
 

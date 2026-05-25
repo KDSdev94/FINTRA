@@ -1,14 +1,38 @@
 <script setup lang="ts">
-withDefaults(
+import { computed, ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
+
+import { useAuthStore } from '@/stores/auth'
+
+const fallbackAvatar = '/avatar-dummy.svg'
+const props = withDefaults(
   defineProps<{
     editable?: boolean;
+    src?: string;
     size?: "md" | "lg";
   }>(),
   {
     editable: false,
+    src: '',
     size: "lg",
   },
 );
+
+const { profile } = storeToRefs(useAuthStore())
+const avatarSrc = computed(() => props.src || profile.value?.avatarUrl || fallbackAvatar)
+const visibleAvatarSrc = ref(avatarSrc.value)
+
+watch(
+  avatarSrc,
+  (nextSrc) => {
+    visibleAvatarSrc.value = nextSrc || fallbackAvatar
+  },
+  { immediate: true },
+)
+
+const handleAvatarError = () => {
+  visibleAvatarSrc.value = fallbackAvatar
+}
 </script>
 
 <template>
@@ -17,9 +41,11 @@ withDefaults(
     :class="size === 'lg' ? 'h-[116px] w-[116px]' : 'h-[108px] w-[108px]'"
   >
     <img
-      src="/avatar-dummy.svg"
-      alt="Dummy profile"
+      :key="visibleAvatarSrc"
+      :src="visibleAvatarSrc"
+      alt="Foto profil"
       class="h-full w-full rounded-full object-cover"
+      @error="handleAvatarError"
     />
 
     <div
