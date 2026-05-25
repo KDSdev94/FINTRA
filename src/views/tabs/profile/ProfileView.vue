@@ -39,46 +39,46 @@ const handleLogout = async () => {
     title="Profil"
     back-to="/home"
     active-nav="profil"
-    header-class="px-6 pt-8 pb-16"
-    panel-inner-class="flex flex-1 flex-col px-6 pt-[74px] pb-28"
+    header-class="px-6 pt-8 pb-14"
+    panel-inner-class="flex flex-1 flex-col px-7 pt-[58px] pb-24"
   >
     <template #panel-overlay>
-      <div class="absolute top-[-58px] left-1/2 -translate-x-1/2">
-        <ProfileAvatar />
+      <div class="absolute top-[-48px] left-1/2 -translate-x-1/2">
+        <ProfileAvatar size="md" />
       </div>
     </template>
 
     <div class="text-center">
       <h2
-        class="text-3xl font-bold leading-none text-(--color-primary-text)"
+        class="mx-auto max-w-72 text-[1.65rem] font-bold leading-[1.08] tracking-[-0.02em] text-(--color-primary-text)"
       >
         {{ profile?.fullName ?? 'Pengguna Fintra' }}
       </h2>
       <p
-        class="mt-2 text-[1rem] text-(--color-muted-text)/85"
+        class="mt-2 text-[0.92rem] text-(--color-muted-text)/85"
       >
         <span class="font-bold">ID:</span> {{ profileId }}
       </p>
     </div>
 
-    <div class="mt-12 flex-1 space-y-7">
+    <div class="mt-10 flex-1 space-y-5">
       <button
         v-for="item in profileMenuItems"
         :key="item.label"
         type="button"
-        class="flex w-full items-center gap-4 text-left"
+        class="flex w-full items-center gap-3.5 rounded-[20px] px-1 py-1 text-left transition active:scale-[0.99]"
         @click="handleMenuClick(item.route)"
       >
         <div
-          class="flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-[18px] bg-(--color-light-blue-button) text-white"
+          class="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-[16px] bg-(--color-light-blue-button) text-white"
           :class="
             item.icon === 'logout' ? 'bg-(--color-blue-button)' : ''
           "
         >
-          <AppIcon :name="item.icon" class="h-7 w-7" />
+          <AppIcon :name="item.icon" class="h-6 w-6" />
         </div>
         <span
-          class="text-[1.1rem] font-medium text-(--color-primary-text)"
+          class="text-[1rem] font-semibold text-(--color-primary-text)"
         >
           {{ item.label }}
         </span>

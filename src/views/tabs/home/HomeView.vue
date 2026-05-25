@@ -164,7 +164,7 @@ const handleNavigate = (key: NavKey) => navigateByTab(router, key)
         >
           <div class="flex w-[40%] flex-col items-center justify-center gap-2">
             <div
-              class="relative flex h-16 w-16 items-center justify-center rounded-full text-(--color-background-dark-mode-and-letters)"
+              class="relative flex h-16 w-16 items-center justify-center rounded-full text-(--color-primary-button-text)"
               :style="{
                 background: financeStore.primaryGoal!.progress > 0
                   ? `conic-gradient(var(--color-ocean-blue-button) 0deg ${financeStore.primaryGoal!.progress * 3.6}deg, rgba(255,255,255,0.3) ${financeStore.primaryGoal!.progress * 3.6}deg 360deg)`
@@ -176,43 +176,43 @@ const handleNavigate = (key: NavKey) => navigateByTab(router, key)
               </div>
             </div>
             <p
-              class="text-center text-xs font-semibold leading-tight text-(--color-background-dark-mode-and-letters)"
+              class="text-center text-xs font-semibold leading-tight text-(--color-primary-button-text)"
             >
               {{ financeStore.primaryGoal.label }}
             </p>
           </div>
 
-          <div class="mx-2 h-16 w-[2px] bg-white/30" />
+          <div class="mx-2 h-16 w-[2px] bg-(--color-primary-button-text)/30" />
 
           <div class="flex w-[55%] flex-col gap-4 pl-2">
             <div class="flex items-center gap-3">
               <AppIcon
                 name="stack"
-                class="h-5 w-5 text-(--color-background-dark-mode-and-letters)/70"
+                class="h-5 w-5 text-(--color-primary-button-text)/70"
               />
               <div>
-                <p class="text-[10px] font-semibold text-(--color-background-dark-mode-and-letters)/70">
+                <p class="text-[10px] font-semibold text-(--color-primary-button-text)/70">
                   {{ periodInsight.incomeLabel }}
                 </p>
-                <p class="text-sm font-bold text-(--color-background-dark-mode-and-letters)">
+                <p class="text-sm font-bold text-(--color-primary-button-text)">
                   {{ periodInsight.incomeValue }}
                 </p>
               </div>
             </div>
 
-            <div class="h-px w-full bg-white/30" />
+            <div class="h-px w-full bg-(--color-primary-button-text)/30" />
 
             <div class="flex items-center gap-3">
               <AppIcon
                 name="food"
-                class="h-5 w-5 text-(--color-background-dark-mode-and-letters)/70"
+                class="h-5 w-5 text-(--color-primary-button-text)/70"
               />
               <div>
-                <p class="text-[10px] font-semibold text-(--color-background-dark-mode-and-letters)/70">
+                <p class="text-[10px] font-semibold text-(--color-primary-button-text)/70">
                   {{ periodInsight.expenseLabel }}
                 </p>
                 <p
-                  class="text-sm font-bold text-(--color-ocean-blue-button)"
+                  class="text-sm font-bold text-(--color-primary-button-text)"
                 >
                   {{ periodInsight.expenseValue }}
                 </p>

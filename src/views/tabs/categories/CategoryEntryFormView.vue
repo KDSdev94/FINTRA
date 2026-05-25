@@ -53,27 +53,31 @@ const balanceSourceLabel = computed(() =>
   isSavingsCategory.value ? 'Ambil dari saldo' : 'Keluar dari saldo',
 )
 
-const sourceOptions: Array<{ key: BalanceSource; label: string }> = [
-  { key: 'bank', label: 'Bank' },
-  { key: 'ewallet', label: 'E-Wallet' },
-  { key: 'cash', label: 'Tunai' },
-]
+const sourceLabels: Record<BalanceSource, string> = {
+  bank: 'Bank',
+  ewallet: 'E-Wallet',
+  cash: 'Tunai',
+}
 
-const accountOptions = computed(() => {
-  if (activeSource.value === 'bank') {
-    return ['BCA', 'Mandiri', 'BRI', 'BNI', 'BSI', 'CIMB Niaga', 'Danamon', 'Permata', 'OCBC NISP', 'Mega', 'BTN', 'Sea Bank', 'Jago', 'Blu by BCA', 'Neo Commerce', 'Allo Bank', 'Bank Muamalat', 'Jenius (BTPN)']
-  }
-
-  if (activeSource.value === 'ewallet') {
-    return ['GoPay', 'OVO', 'DANA', 'ShopeePay', 'LinkAja', 'Sakuku', 'i.saku', 'DOKU', 'Kredivo', 'Akulaku']
-  }
-
-  return ['Dompet Utama', 'Kas Harian', 'Uang Jajan']
+const sourceOptions = computed(() => {
+  const availableSources = new Set(financeStore.accountBalances.map((account) => account.sourceType))
+  return Array.from(availableSources).map((source) => ({
+    key: source,
+    label: sourceLabels[source],
+  }))
 })
+
+const accountOptions = computed(() =>
+  financeStore.accountBalances.filter((account) => account.sourceType === activeSource.value),
+)
+
+const selectedAccountBalance = computed(() =>
+  accountOptions.value.find((account) => account.accountName === selectedAccount.value)?.balance ?? 0,
+)
 
 const applySource = (source: BalanceSource) => {
   activeSource.value = source
-  selectedAccount.value = accountOptions.value[0]
+  selectedAccount.value = accountOptions.value[0]?.accountName ?? ''
 }
 
 const selectExpenseCategory = (slug: string) => {
@@ -86,6 +90,21 @@ watchEffect(() => {
 
   if (isSavingsCategory.value) {
     expenseTitle.value = activeGoal.value?.addTitle ?? ''
+  }
+})
+
+watchEffect(() => {
+  if (financeStore.accountBalances.length === 0) {
+    selectedAccount.value = ''
+    return
+  }
+
+  if (!sourceOptions.value.some((option) => option.key === activeSource.value)) {
+    activeSource.value = sourceOptions.value[0]?.key ?? 'bank'
+  }
+
+  if (!accountOptions.value.some((account) => account.accountName === selectedAccount.value)) {
+    selectedAccount.value = accountOptions.value[0]?.accountName ?? ''
   }
 })
 
@@ -103,12 +122,37 @@ const handleSave = async () => {
     return
   }
 
+  if (!selectedAccount.value) {
+    errorMessage.value = 'Belum ada saldo masuk. Tambah saldo dulu sebelum bikin pengeluaran.'
+    return
+  }
+
+  if (parsedAmount > selectedAccountBalance.value) {
+    errorMessage.value = `Saldo ${selectedAccount.value} cuma ${formatCurrency(selectedAccountBalance.value)}.`
+    return
+  }
+
   saving.value = true
   const transactionAt = new Date(`${formDate.value}T12:00:00`).toISOString()
 
-  if (isSavingsCategory.value) {
-    await financeStore.addSavingEntry({
-      goalSlug: activeGoal.value?.slug ?? financeStore.savingsGoalViews[0]?.slug ?? '',
+  try {
+    if (isSavingsCategory.value) {
+      await financeStore.addSavingEntry({
+        goalSlug: activeGoal.value?.slug ?? financeStore.savingsGoalViews[0]?.slug ?? '',
+        title: expenseTitle.value,
+        note: message.value,
+        amount: parsedAmount,
+        sourceType: activeSource.value,
+        accountName: selectedAccount.value,
+        transactionAt,
+      })
+
+      await router.push(`/categories/savings?goal=${activeGoal.value?.slug}`)
+      return
+    }
+
+    await financeStore.addExpense({
+      categorySlug: selectedCategorySlug.value,
       title: expenseTitle.value,
       note: message.value,
       amount: parsedAmount,
@@ -117,21 +161,12 @@ const handleSave = async () => {
       transactionAt,
     })
 
-    await router.push(`/categories/savings?goal=${activeGoal.value?.slug}`)
-    return
+    await router.push(`/categories/${selectedCategorySlug.value}`)
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Gagal menyimpan pengeluaran.'
+  } finally {
+    saving.value = false
   }
-
-  await financeStore.addExpense({
-    categorySlug: selectedCategorySlug.value,
-    title: expenseTitle.value,
-    note: message.value,
-    amount: parsedAmount,
-    sourceType: activeSource.value,
-    accountName: selectedAccount.value,
-    transactionAt,
-  })
-
-  await router.push(`/categories/${selectedCategorySlug.value}`)
 }
 </script>
 
@@ -239,6 +274,13 @@ const handleSave = async () => {
               >
                 {{ option.label }}
               </button>
+
+              <div
+                v-if="sourceOptions.length === 0"
+                class="col-span-3 rounded-[14px] bg-(--color-input-background) px-4 py-3 text-center text-[0.82rem] font-semibold text-(--color-muted-text)"
+              >
+                Belum ada saldo masuk
+              </div>
             </div>
           </div>
 
@@ -249,12 +291,20 @@ const handleSave = async () => {
 
             <select
               v-model="selectedAccount"
+              :disabled="accountOptions.length === 0"
               class="h-11 w-full appearance-none rounded-full bg-(--color-input-background) px-5 text-[0.95rem] text-(--color-input-text) focus:outline-none"
             >
-              <option v-for="account in accountOptions" :key="account" :value="account">
-                {{ account }}
+              <option v-for="account in accountOptions" :key="`${account.sourceType}-${account.accountName}`" :value="account.accountName">
+                {{ account.accountName }} - {{ formatCurrency(account.balance) }}
               </option>
             </select>
+
+            <p v-if="selectedAccount" class="mt-2 text-xs font-semibold text-(--color-muted-text)/85">
+              Sisa saldo {{ selectedAccount }}: {{ formatCurrency(selectedAccountBalance) }}
+            </p>
+            <p v-else class="mt-2 text-xs font-semibold text-(--color-ocean-blue-button)">
+              Tambah saldo dulu supaya akun sumber dana muncul di sini.
+            </p>
           </div>
 
           <div>

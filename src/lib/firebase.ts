@@ -15,7 +15,7 @@ const missingFirebaseEnv = Object.entries(requiredFirebaseEnv)
   .map(([key]) => key)
 
 if (missingFirebaseEnv.length > 0) {
-  throw new Error(`Firebase env belum lengkap: ${missingFirebaseEnv.join(', ')}`)
+  throw new Error(`Konfigurasi aplikasi belum lengkap: ${missingFirebaseEnv.join(', ')}`)
 }
 
 const firebaseConfig = {

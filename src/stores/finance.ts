@@ -25,7 +25,7 @@ import {
 import { db } from '@/lib/firebase'
 import { useAuthStore } from '@/stores/auth'
 import type { CategoryIcon, CategoryItem, CategoryMonthGroup, SavingsGoal } from '@/types/category'
-import type { TransactionGroup, TransactionRecord } from '@/types/transaction'
+import type { SourceType, TransactionGroup, TransactionRecord } from '@/types/transaction'
 
 type CategoryDoc = {
   slug: string
@@ -54,6 +54,14 @@ type TransactionDoc = {
   amount: number
   transactionAt: string
   savingsGoalId: string | null
+}
+
+export type AccountBalance = {
+  sourceType: SourceType
+  accountName: string
+  income: number
+  outcome: number
+  balance: number
 }
 
 const toCategoryItem = (id: string, row: CategoryDoc): CategoryItem => ({
@@ -137,6 +145,43 @@ export const useFinanceStore = defineStore('finance', {
     },
     balance(): number {
       return this.totalIncome - this.totalExpense - this.totalSaving
+    },
+    accountBalances(): AccountBalance[] {
+      const balances = new Map<string, AccountBalance>()
+
+      for (const transaction of this.transactions) {
+        const key = `${transaction.sourceType}:${transaction.accountName}`
+        const current = balances.get(key) ?? {
+          sourceType: transaction.sourceType,
+          accountName: transaction.accountName,
+          income: 0,
+          outcome: 0,
+          balance: 0,
+        }
+
+        if (transaction.transactionType === 'income') {
+          current.income += transaction.amount
+          current.balance += transaction.amount
+        } else {
+          current.outcome += transaction.amount
+          current.balance -= transaction.amount
+        }
+
+        balances.set(key, current)
+      }
+
+      return Array.from(balances.values())
+        .filter((account) => account.balance > 0)
+        .sort((a, b) => {
+          if (a.sourceType !== b.sourceType) return a.sourceType.localeCompare(b.sourceType)
+          return a.accountName.localeCompare(b.accountName)
+        })
+    },
+    accountBalanceByKey(): (sourceType: SourceType, accountName: string) => number {
+      return (sourceType, accountName) =>
+        this.accountBalances.find(
+          (account) => account.sourceType === sourceType && account.accountName === accountName,
+        )?.balance ?? 0
     },
     savingsGoalViews(): SavingsGoal[] {
       return this.savingsGoals.map((goal) =>
@@ -254,52 +299,73 @@ export const useFinanceStore = defineStore('finance', {
     async addCategory(label: string, icon: CategoryIcon = 'stack') {
       const authStore = useAuthStore()
       if (!authStore.user?.uid) {
-        return
+        throw new Error('Sesi login tidak ditemukan.')
       }
 
       const trimmed = label.trim()
       if (!trimmed) {
-        return
+        throw new Error('Nama kategori wajib diisi.')
       }
 
       const existingSlugs = new Set(this.expenseCategories.map((item) => item.slug))
-      let nextSlug = slugify(trimmed) || 'kategori-baru'
+      const baseSlug = slugify(trimmed) || 'kategori-baru'
+      let nextSlug = baseSlug
       let suffix = 2
 
       while (existingSlugs.has(nextSlug)) {
-        nextSlug = `${slugify(trimmed)}-${suffix}`
+        nextSlug = `${baseSlug}-${suffix}`
         suffix += 1
       }
 
-      await setDoc(doc(db, 'users', authStore.user.uid, 'categories', nextSlug), {
-        slug: nextSlug,
-        label: trimmed,
-        icon,
-        kind: 'expense',
-        createdAt: serverTimestamp(),
-      })
+      try {
+        await setDoc(doc(db, 'users', authStore.user.uid, 'categories', nextSlug), {
+          slug: nextSlug,
+          label: trimmed,
+          icon,
+          kind: 'expense',
+          createdAt: serverTimestamp(),
+        })
 
-      this.initialize(true)
+        await this.initialize(true)
+      } catch (error) {
+        this.errorMessage = error instanceof Error ? error.message : 'Gagal menambah kategori.'
+        throw error
+      }
     },
 
     async updateCategory(categoryId: string, payload: { label: string; icon: CategoryIcon }) {
       const authStore = useAuthStore()
-      if (!authStore.user?.uid) return
+      if (!authStore.user?.uid) throw new Error('Sesi login tidak ditemukan.')
 
-      await updateDoc(doc(db, 'users', authStore.user.uid, 'categories', categoryId), {
-        label: payload.label,
-        icon: payload.icon,
-      })
+      const trimmed = payload.label.trim()
+      if (!trimmed) {
+        throw new Error('Nama kategori wajib diisi.')
+      }
 
-      this.initialize(true)
+      try {
+        await updateDoc(doc(db, 'users', authStore.user.uid, 'categories', categoryId), {
+          label: trimmed,
+          icon: payload.icon,
+        })
+
+        await this.initialize(true)
+      } catch (error) {
+        this.errorMessage = error instanceof Error ? error.message : 'Gagal mengubah kategori.'
+        throw error
+      }
     },
 
     async deleteCategory(categoryId: string) {
       const authStore = useAuthStore()
-      if (!authStore.user?.uid) return
+      if (!authStore.user?.uid) throw new Error('Sesi login tidak ditemukan.')
 
-      await deleteDoc(doc(db, 'users', authStore.user.uid, 'categories', categoryId))
-      this.initialize(true)
+      try {
+        await deleteDoc(doc(db, 'users', authStore.user.uid, 'categories', categoryId))
+        await this.initialize(true)
+      } catch (error) {
+        this.errorMessage = error instanceof Error ? error.message : 'Gagal menghapus kategori.'
+        throw error
+      }
     },
 
     async addIncome(payload: {
@@ -352,6 +418,11 @@ export const useFinanceStore = defineStore('finance', {
         throw new Error('Kategori tidak ditemukan.')
       }
 
+      const sourceBalance = this.accountBalanceByKey(payload.sourceType, payload.accountName)
+      if (payload.amount > sourceBalance) {
+        throw new Error(`Saldo ${payload.accountName} cuma ${formatCurrency(sourceBalance)}.`)
+      }
+
       await addDoc(collection(db, 'users', authStore.user.uid, 'transactions'), {
         title: payload.title,
         note: payload.note,
@@ -389,6 +460,11 @@ export const useFinanceStore = defineStore('finance', {
         throw new Error('Target tabungan tidak ditemukan.')
       }
 
+      const sourceBalance = this.accountBalanceByKey(payload.sourceType, payload.accountName)
+      if (payload.amount > sourceBalance) {
+        throw new Error(`Saldo ${payload.accountName} cuma ${formatCurrency(sourceBalance)}.`)
+      }
+
       await addDoc(collection(db, 'users', authStore.user.uid, 'transactions'), {
         title: payload.title,
         note: payload.note,
@@ -417,6 +493,24 @@ export const useFinanceStore = defineStore('finance', {
     }) {
       const authStore = useAuthStore()
       if (!authStore.user?.uid) return
+
+      const existingTransaction = this.transactions.find((transaction) => transaction.id === transactionId)
+
+      if (
+        existingTransaction &&
+        (existingTransaction.transactionType === 'expense' || existingTransaction.transactionType === 'saving')
+      ) {
+        const currentAccountBalance = this.accountBalanceByKey(payload.sourceType, payload.accountName)
+        const replacedAmount =
+          existingTransaction.sourceType === payload.sourceType && existingTransaction.accountName === payload.accountName
+            ? existingTransaction.amount
+            : 0
+        const availableBalance = currentAccountBalance + replacedAmount
+
+        if (payload.amount > availableBalance) {
+          throw new Error(`Saldo ${payload.accountName} cuma ${formatCurrency(availableBalance)}.`)
+        }
+      }
 
       await updateDoc(doc(db, 'users', authStore.user.uid, 'transactions', transactionId), {
         title: payload.title,

@@ -59,7 +59,7 @@ const toProfile = (user: User, docData?: AuthProfileDoc | null): AuthProfile => 
   fullName: docData?.fullName ?? user.displayName ?? 'Pengguna Fintra',
   phoneNumber: docData?.phoneNumber ?? '',
   birthDate: toDateInputValue(docData?.birthDate),
-  avatarUrl: docData?.avatarUrl ?? user.photoURL ?? '',
+  avatarUrl: docData?.avatarUrl || user.photoURL || '',
   pushNotifications: docData?.pushNotifications ?? true,
   email: docData?.email ?? user.email ?? '',
   pin: docData?.pin ?? '',
@@ -187,16 +187,16 @@ const mapAuthError = (error: unknown) => {
     return 'Email ini sudah terhubung ke metode login lain.'
   }
   if (code === 'auth/operation-not-allowed') {
-    return 'Login Google belum aktif di Firebase Authentication.'
+    return 'Login Google belum aktif di aplikasi.'
   }
   if (code === 'auth/popup-blocked') {
     return 'Popup Google gagal dipakai di browser ini. Coba sekali lagi, dan jangan klik tombol Google berulang.'
   }
   if (code === 'auth/unauthorized-domain') {
-    return 'Domain aplikasi ini belum didaftarkan di Authorized Domains Firebase.'
+    return 'Domain aplikasi ini belum diizinkan untuk login Google.'
   }
   if (code === 'auth/invalid-api-key') {
-    return 'Konfigurasi Firebase tidak valid. API key bermasalah.'
+    return 'Konfigurasi aplikasi tidak valid. Hubungi admin.'
   }
   if (code.startsWith('auth/')) {
     return `Login Google gagal (${code}).`
@@ -287,7 +287,7 @@ export const useAuthStore = defineStore('auth', {
           }
         })
       } catch (error) {
-        this.errorMessage = error instanceof Error ? error.message : 'Gagal menghubungkan Firebase Auth.'
+        this.errorMessage = error instanceof Error ? error.message : 'Gagal menghubungkan layanan login.'
       } finally {
         this.initialized = true
       }
@@ -319,6 +319,13 @@ export const useAuthStore = defineStore('auth', {
       }
 
       this.profile = toProfile(this.user, snapshot.data() as AuthProfileDoc)
+
+      // Selalu sync foto dari Google untuk Google user
+      if (isGoogleUser(this.user) && this.user.photoURL && this.profile.avatarUrl !== this.user.photoURL) {
+        this.profile.avatarUrl = this.user.photoURL
+        await setDoc(profileRef, { avatarUrl: this.user.photoURL, updatedAt: serverTimestamp() }, { merge: true })
+      }
+
       setThemeMode(this.profile.themePreference)
     },
 
@@ -416,8 +423,14 @@ export const useAuthStore = defineStore('auth', {
         const credential = await signInWithPopup(auth, googleProvider)
         await this.hydrateUser(credential.user)
       } catch (error) {
+        const code = (error as { code?: string })?.code ?? ''
+
+        if (code === 'auth/cancelled-popup-request' || code === 'auth/popup-closed-by-user') {
+          return
+        }
+
         this.errorMessage =
-          error instanceof Error && !String((error as { code?: string }).code ?? '').startsWith('auth/')
+          error instanceof Error && !code.startsWith('auth/')
             ? error.message
             : mapAuthError(error)
         throw error

@@ -24,6 +24,7 @@ const editAmount = ref('')
 const editDate = ref('')
 const editSource = ref<SourceType>('bank')
 const editAccount = ref('')
+const errorMessage = ref('')
 
 const sourceOptions: Array<{ key: SourceType; label: string }> = [
   { key: 'bank', label: 'Bank' },
@@ -31,7 +32,7 @@ const sourceOptions: Array<{ key: SourceType; label: string }> = [
   { key: 'cash', label: 'Tunai' },
 ]
 
-const accountOptions = computed(() => {
+const defaultAccountOptions = computed(() => {
   if (editSource.value === 'bank') {
     return ['BCA', 'Mandiri', 'BRI', 'BNI', 'BSI', 'CIMB Niaga', 'Danamon', 'Permata', 'OCBC NISP', 'Mega', 'BTN', 'Sea Bank', 'Jago', 'Blu by BCA', 'Neo Commerce', 'Allo Bank', 'Bank Muamalat', 'Jenius (BTPN)']
   }
@@ -39,6 +40,57 @@ const accountOptions = computed(() => {
     return ['GoPay', 'OVO', 'DANA', 'ShopeePay', 'LinkAja', 'Sakuku', 'i.saku', 'DOKU', 'Kredivo', 'Akulaku']
   }
   return ['Dompet Utama', 'Kas Harian', 'Uang Jajan']
+})
+
+const isSpendingTransaction = computed(() =>
+  transaction.value?.transactionType === 'expense' || transaction.value?.transactionType === 'saving',
+)
+
+const spendingAccountOptions = computed(() => {
+  const accounts = financeStore.accountBalances.filter((account) => account.sourceType === editSource.value)
+  const current = transaction.value
+
+  if (
+    current &&
+    isSpendingTransaction.value &&
+    current.sourceType === editSource.value &&
+    !accounts.some((account) => account.accountName === current.accountName)
+  ) {
+    return [
+      ...accounts,
+      {
+        sourceType: current.sourceType,
+        accountName: current.accountName,
+        income: 0,
+        outcome: current.amount,
+        balance: current.amount,
+      },
+    ]
+  }
+
+  return accounts
+})
+
+const accountOptions = computed(() =>
+  isSpendingTransaction.value
+    ? spendingAccountOptions.value.map((account) => account.accountName)
+    : defaultAccountOptions.value,
+)
+
+const selectedEditAccountBalance = computed(() => {
+  const current = transaction.value
+  const currentBalance = financeStore.accountBalanceByKey(editSource.value, editAccount.value)
+
+  if (
+    current &&
+    isSpendingTransaction.value &&
+    current.sourceType === editSource.value &&
+    current.accountName === editAccount.value
+  ) {
+    return currentBalance + current.amount
+  }
+
+  return currentBalance
 })
 
 const typeLabel = computed(() => {
@@ -61,23 +113,49 @@ watchEffect(() => {
 
 const startEdit = () => { isEditing.value = true }
 
-const cancelEdit = () => { isEditing.value = false }
+const applyEditSource = (source: SourceType) => {
+  editSource.value = source
+  editAccount.value = accountOptions.value[0] ?? ''
+}
+
+const cancelEdit = () => {
+  errorMessage.value = ''
+  isEditing.value = false
+}
 
 const handleSave = async () => {
   if (saving.value) return
+  errorMessage.value = ''
+
+  const parsedAmount = parseCurrencyInput(editAmount.value)
+  if (!parsedAmount) {
+    errorMessage.value = 'Nominal belum valid.'
+    return
+  }
+
+  if (isSpendingTransaction.value && parsedAmount > selectedEditAccountBalance.value) {
+    errorMessage.value = `Saldo ${editAccount.value} cuma ${formatCurrency(selectedEditAccountBalance.value)}.`
+    return
+  }
+
   saving.value = true
 
-  await financeStore.updateTransaction(transactionId.value, {
-    title: editTitle.value,
-    note: editNote.value,
-    amount: parseCurrencyInput(editAmount.value),
-    sourceType: editSource.value,
-    accountName: editAccount.value,
-    transactionAt: new Date(`${editDate.value}T12:00:00`).toISOString(),
-  })
+  try {
+    await financeStore.updateTransaction(transactionId.value, {
+      title: editTitle.value,
+      note: editNote.value,
+      amount: parsedAmount,
+      sourceType: editSource.value,
+      accountName: editAccount.value,
+      transactionAt: new Date(`${editDate.value}T12:00:00`).toISOString(),
+    })
 
-  saving.value = false
-  isEditing.value = false
+    isEditing.value = false
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Gagal menyimpan transaksi.'
+  } finally {
+    saving.value = false
+  }
 }
 
 const handleDelete = async () => {
@@ -169,7 +247,7 @@ const handleDelete = async () => {
                   type="button"
                   class="rounded-[14px] py-2.5 text-[0.88rem] font-semibold transition"
                   :class="editSource === opt.key ? 'bg-(--color-main-green) text-(--color-background-dark-mode-and-letters)' : 'text-(--color-primary-text)/75'"
-                  @click="editSource = opt.key"
+                  @click="applyEditSource(opt.key)"
                 >
                   {{ opt.label }}
                 </button>
@@ -181,12 +259,19 @@ const handleDelete = async () => {
               <select v-model="editAccount" class="h-11 w-full appearance-none rounded-full bg-(--color-input-background) px-5 text-[0.95rem] text-(--color-input-text) focus:outline-none">
                 <option v-for="account in accountOptions" :key="account" :value="account">{{ account }}</option>
               </select>
+              <p v-if="isSpendingTransaction" class="mt-2 text-xs font-semibold text-(--color-muted-text)/85">
+                Saldo bisa dipakai: {{ formatCurrency(selectedEditAccountBalance) }}
+              </p>
             </div>
 
             <div>
               <label class="mb-2 block text-[0.95rem] font-medium text-(--color-primary-text)">Catatan</label>
               <textarea v-model="editNote" rows="3" class="w-full rounded-[18px] bg-(--color-input-background) px-4 py-3 text-[0.95rem] text-(--color-input-text) focus:outline-none" />
             </div>
+
+            <p v-if="errorMessage" class="text-center text-sm font-medium text-(--color-ocean-blue-button)">
+              {{ errorMessage }}
+            </p>
 
             <div class="flex gap-3 pt-2">
               <AppButton class="flex-1" :loading="saving" @click="handleSave">Simpan</AppButton>

@@ -21,6 +21,8 @@ const editCategoryId = ref('')
 const newCategory = ref('')
 const selectedIcon = ref<CategoryIcon>('stack')
 const showDeleteConfirm = ref(false)
+const isSavingCategory = ref(false)
+const categoryError = ref('')
 
 const iconOptions: Array<{ key: CategoryIcon; label: string }> = [
   { key: 'food', label: 'Makan' },
@@ -65,6 +67,7 @@ const openAddModal = () => {
   editCategoryId.value = ''
   newCategory.value = ''
   selectedIcon.value = 'stack'
+  categoryError.value = ''
   isModalOpen.value = true
 }
 
@@ -74,23 +77,58 @@ const openEditModal = (item: { id: string; label: string; icon: CategoryIcon; sl
   editCategoryId.value = item.id
   newCategory.value = item.label
   selectedIcon.value = item.icon
+  categoryError.value = ''
   isModalOpen.value = true
 }
 
 const handleSave = async () => {
-  if (isEditMode.value) {
-    await financeStore.updateCategory(editCategoryId.value, { label: newCategory.value, icon: selectedIcon.value })
-  } else {
-    await financeStore.addCategory(newCategory.value, selectedIcon.value)
+  if (isSavingCategory.value) {
+    return
   }
-  isModalOpen.value = false
-  newCategory.value = ''
+
+  categoryError.value = ''
+
+  if (!newCategory.value.trim()) {
+    categoryError.value = 'Nama kategori wajib diisi.'
+    return
+  }
+
+  isSavingCategory.value = true
+
+  try {
+    if (isEditMode.value) {
+      await financeStore.updateCategory(editCategoryId.value, { label: newCategory.value, icon: selectedIcon.value })
+    } else {
+      await financeStore.addCategory(newCategory.value, selectedIcon.value)
+    }
+
+    isModalOpen.value = false
+    newCategory.value = ''
+  } catch (error) {
+    categoryError.value = error instanceof Error ? error.message : 'Gagal menyimpan kategori.'
+  } finally {
+    isSavingCategory.value = false
+  }
 }
 
 const handleDelete = async () => {
-  await financeStore.deleteCategory(editCategoryId.value)
-  showDeleteConfirm.value = false
-  isModalOpen.value = false
+  if (isSavingCategory.value) {
+    return
+  }
+
+  categoryError.value = ''
+  isSavingCategory.value = true
+
+  try {
+    await financeStore.deleteCategory(editCategoryId.value)
+    showDeleteConfirm.value = false
+    isModalOpen.value = false
+  } catch (error) {
+    categoryError.value = error instanceof Error ? error.message : 'Gagal menghapus kategori.'
+    showDeleteConfirm.value = false
+  } finally {
+    isSavingCategory.value = false
+  }
 }
 
 const handleNavigate = (key: NavKey) => navigateByTab(router, key)
@@ -169,7 +207,7 @@ const handleNavigate = (key: NavKey) => navigateByTab(router, key)
         <div class="grid grid-cols-3 gap-x-5 gap-y-8 pb-28">
           <div
             v-for="item in categoryTiles"
-            :key="item.label"
+            :key="item.slug"
             class="relative flex flex-col items-center"
           >
             <button
@@ -231,15 +269,19 @@ const handleNavigate = (key: NavKey) => navigateByTab(router, key)
             </button>
           </div>
 
-          <AppButton class="mt-5" full @click="handleSave">
-            Simpan
+          <p v-if="categoryError" class="mt-4 text-sm font-semibold text-(--color-ocean-blue-button)">
+            {{ categoryError }}
+          </p>
+
+          <AppButton class="mt-5" full :loading="isSavingCategory" @click="handleSave">
+            {{ isSavingCategory ? 'Menyimpan...' : 'Simpan' }}
           </AppButton>
 
-          <AppButton v-if="isEditMode" class="mt-3" variant="soft" full @click="showDeleteConfirm = true">
+          <AppButton v-if="isEditMode" class="mt-3" variant="soft" full :disabled="isSavingCategory" @click="showDeleteConfirm = true">
             Hapus Kategori
           </AppButton>
 
-          <AppButton class="mt-3" variant="soft" full @click="isModalOpen = false">
+          <AppButton class="mt-3" variant="soft" full :disabled="isSavingCategory" @click="isModalOpen = false">
             Batal
           </AppButton>
         </div>
@@ -252,8 +294,10 @@ const handleNavigate = (key: NavKey) => navigateByTab(router, key)
         <div class="w-full max-w-76 rounded-[24px] bg-(--color-panel-background) px-7 py-8 text-center shadow-xl">
           <h2 class="text-[1.3rem] font-bold text-(--color-primary-text)">Hapus Kategori?</h2>
           <p class="mt-2 text-sm text-(--color-muted-text)">Transaksi di kategori ini tetap tersimpan.</p>
-          <AppButton class="mt-5" full @click="handleDelete">Ya, Hapus</AppButton>
-          <AppButton class="mt-3" variant="soft" full @click="showDeleteConfirm = false">Batal</AppButton>
+          <AppButton class="mt-5" full :loading="isSavingCategory" @click="handleDelete">
+            {{ isSavingCategory ? 'Menghapus...' : 'Ya, Hapus' }}
+          </AppButton>
+          <AppButton class="mt-3" variant="soft" full :disabled="isSavingCategory" @click="showDeleteConfirm = false">Batal</AppButton>
         </div>
       </div>
     </section>

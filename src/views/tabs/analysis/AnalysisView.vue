@@ -127,7 +127,7 @@ const handleNavigate = (key: NavKey) => navigateByTab(router, key)
           >
             ✓
           </span>
-          Data pengeluaran diambil langsung dari transaksi Firebase.
+          Data pengeluaran dihitung langsung dari riwayat transaksi kamu.
         </p>
       </div>
 
