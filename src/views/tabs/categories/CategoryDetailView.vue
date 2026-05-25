@@ -154,7 +154,7 @@ const handleBack = () => {
             <p class="mt-1 text-sm text-(--color-muted-text)/70">Yuk buat target pertama kamu!</p>
           </div>
 
-          <div v-else class="grid grid-cols-3 gap-x-5 gap-y-8 pb-8">
+          <div v-else class="grid grid-cols-3 gap-x-4 gap-y-6 pb-8">
             <div
               v-for="goal in savingsGoalViews"
               :key="goal.slug"
@@ -162,10 +162,10 @@ const handleBack = () => {
             >
               <button
                 type="button"
-                class="flex h-[96px] w-full items-center justify-center rounded-[24px] bg-(--color-light-blue-button) text-white transition"
+                class="flex h-[72px] w-full items-center justify-center rounded-[20px] bg-(--color-light-blue-button) text-white transition"
                 @click="openSavingsGoal(goal.slug)"
               >
-                <AppIcon :name="goal.icon" class="h-12 w-12" />
+                <AppIcon :name="goal.icon" class="h-8 w-8" />
               </button>
               <button
                 type="button"
@@ -191,16 +191,16 @@ const handleBack = () => {
           <div class="flex-1 overflow-y-auto pb-26">
             <div class="flex flex-col items-center pt-2">
               <div
-                class="flex h-[140px] w-[140px] items-center justify-center rounded-[32px] bg-(--color-light-blue-button)"
+                class="flex h-[100px] w-[100px] items-center justify-center rounded-[24px] bg-(--color-light-blue-button)"
               >
                 <div
-                  class="flex h-[110px] w-[110px] items-center justify-center rounded-full"
+                  class="flex h-[80px] w-[80px] items-center justify-center rounded-full"
                   :style="{
                     background: `conic-gradient(#0040AA 0deg ${(activeGoal?.progress ?? 0) * 3.6}deg, rgba(255,255,255,0.7) ${(activeGoal?.progress ?? 0) * 3.6}deg 360deg)`,
                   }"
                 >
-                  <div class="flex h-[88px] w-[88px] items-center justify-center rounded-full bg-(--color-light-blue-button) text-white">
-                    <AppIcon :name="activeGoal?.icon ?? 'savings'" class="h-10 w-10" />
+                  <div class="flex h-[64px] w-[64px] items-center justify-center rounded-full bg-(--color-light-blue-button) text-white">
+                    <AppIcon :name="activeGoal?.icon ?? 'savings'" class="h-7 w-7" />
                   </div>
                 </div>
               </div>

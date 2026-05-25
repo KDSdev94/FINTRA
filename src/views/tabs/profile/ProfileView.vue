@@ -54,11 +54,6 @@ const handleLogout = async () => {
       >
         {{ profile?.fullName ?? 'Pengguna Fintra' }}
       </h2>
-      <p
-        class="mt-2 text-[0.92rem] text-(--color-muted-text)/85"
-      >
-        <span class="font-bold">ID:</span> {{ profileId }}
-      </p>
     </div>
 
     <div class="mt-10 flex-1 space-y-5">

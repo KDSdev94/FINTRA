@@ -141,11 +141,6 @@ const handleAvatarChange = async (event: Event) => {
             {{ profile?.fullName ?? 'Pengguna Fintra' }}
           </h2>
           <p
-            class="mt-2 text-[1rem] text-(--color-muted-text)/85"
-          >
-            <span class="font-bold">ID:</span> {{ profile?.id.slice(0, 8).toUpperCase() ?? 'GUEST' }}
-          </p>
-          <p
             v-if="avatarUploading || avatarError"
             class="mt-3 text-sm font-semibold"
             :class="avatarError ? 'text-(--color-ocean-blue-button)' : 'text-(--color-muted-text)'"

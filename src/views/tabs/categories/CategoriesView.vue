@@ -204,7 +204,7 @@ const handleNavigate = (key: NavKey) => navigateByTab(router, key)
       <div
         class="relative mt-2 flex flex-1 flex-col rounded-t-[40px] bg-(--color-panel-background) px-6 pt-8"
       >
-        <div class="grid grid-cols-3 gap-x-5 gap-y-8 pb-28">
+        <div class="grid grid-cols-3 gap-x-4 gap-y-6 pb-28">
           <div
             v-for="item in categoryTiles"
             :key="item.slug"
@@ -212,7 +212,7 @@ const handleNavigate = (key: NavKey) => navigateByTab(router, key)
           >
             <button
               type="button"
-              class="flex h-[96px] w-full items-center justify-center rounded-[24px] text-white transition"
+              class="flex h-[72px] w-full items-center justify-center rounded-[20px] text-white transition"
               :class="
                 item.active
                   ? 'bg-(--color-ocean-blue-button)'
@@ -220,7 +220,7 @@ const handleNavigate = (key: NavKey) => navigateByTab(router, key)
               "
               @click="handleCategoryClick(item)"
             >
-              <AppIcon :name="item.icon" class="h-12 w-12" />
+              <AppIcon :name="item.icon" class="h-8 w-8" />
             </button>
             <button
               v-if="!item.more && item.slug !== 'savings'"
