@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+:root {
+  --color-dark-mode-green-black: #031314;
+  --color-background-dark-mode-and-letters: #052224;
+  --color-letters-and-icons: #0e3e3e;
+  --color-dark-mode-green-bar: #0b4a4a;
+  --color-main-green: #00d09e;
+  --color-light-green: #dff7e2;
+  --color-background-green-white-and-letter: #f1fff3;
+  --color-light-blue-button: #74dfc3;
+  --color-blue-button: #00b889;
+  --color-ocean-blue-button: #008e6a;
+  --color-shell-background: #00d09e;
+  --color-shell-text: #052224;
+  --color-panel-background: #f1fff3;
+  --color-nav-background: #dff7e2;
+  --color-surface-background: #dff7e2;
+  --color-primary-text: #052224;
+  --color-muted-text: #0e3e3e;
+  --color-glass-surface: rgba(255, 255, 255, 0.45);
+  --color-input-background: #dff7e2;
+  --color-input-text: #052224;
+  --color-primary-button-background: #00d09e;
+  --color-primary-button-text: #052224;
+  --color-soft-button-background: #dff7e2;
+  --color-soft-button-text: #052224;
+  --color-segmented-background: #dff7e2;
+  --color-segmented-inactive-text: #0e3e3e;
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-background-green-white-and-letter);
+  color: var(--color-letters-and-icons);
+  font-family: 'Poppins', 'Segoe UI', sans-serif;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-input-text);
+  opacity: 0.42;
+}

@@ -1,0 +1,21 @@
+<svg width="240" height="240" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="24" y1="20" x2="210" y2="224" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#BFE8FF"/>
+      <stop offset="1" stop-color="#4D89FF"/>
+    </linearGradient>
+    <linearGradient id="shirt" x1="120" y1="132" x2="120" y2="226" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F4C81"/>
+      <stop offset="1" stop-color="#0A2F52"/>
+    </linearGradient>
+  </defs>
+  <rect width="240" height="240" rx="120" fill="url(#bg)"/>
+  <circle cx="120" cy="96" r="42" fill="#F2C7A5"/>
+  <path d="M78 87C78 62.1472 96.804 42 120 42C143.196 42 162 62.1472 162 87V103H78V87Z" fill="#2A2628"/>
+  <path d="M88 84C88 66.3269 102.327 52 120 52C137.673 52 152 66.3269 152 84V101H88V84Z" fill="#3A3437"/>
+  <path d="M72 216C77.6981 176.392 94.1414 156.588 120 156.588C145.859 156.588 162.302 176.392 168 216H72Z" fill="url(#shirt)"/>
+  <path d="M94 152C101.838 145.134 110.505 141.701 120 141.701C129.495 141.701 138.162 145.134 146 152L132.588 168.322C129.138 172.52 123.956 174.966 118.522 174.966C113.088 174.966 107.906 172.52 104.456 168.322L94 152Z" fill="#F7F9FC"/>
+  <circle cx="104" cy="95" r="4" fill="#7A4D39"/>
+  <circle cx="136" cy="95" r="4" fill="#7A4D39"/>
+  <path d="M106 116C113.278 121.699 126.722 121.699 134 116" stroke="#B76E5A" stroke-width="4" stroke-linecap="round"/>
+</svg>
